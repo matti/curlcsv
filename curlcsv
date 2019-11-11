@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+_term() {
+  >&2 echo "TERM"
+  exit 0
+}
+trap "_term" TERM
+
+_err() {
+  >&2 echo "err: $*"
+  exit 1
+}
+
+while true; do
+  printf "$(date),"
+  curl -L -s -o /dev/null -w  "%{http_code},%{time_starttransfer}\n" $@ | cut -c -8
+  sleep 0.1
+done
