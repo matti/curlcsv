@@ -5,15 +5,30 @@ _term() {
   >&2 echo "TERM"
   exit 0
 }
-trap "_term" TERM
+_int() {
+  pbcopy < "$csv"
+  echo ""
+  echo ""
+  echo "$csv"
+}
 
+trap "_term" TERM
+trap "_int" INT
 _err() {
   >&2 echo "err: $*"
   exit 1
 }
 
+started_at=$(date +%Y-%m-%d-%H-%M-%S)
+csv="/tmp/curlcsv-$started_at.csv"
+
+printf "date\ttook\tcode\n" | tee -a "$csv"
 while true; do
-  printf "$(date),"
-  curl -L -s -o /dev/null -w  "%{http_code},%{time_starttransfer}\n" $@ | cut -c -8
+  now=$(date '+%Y-%m-%d %H:%M:%S')
+  line=$(curl -L -s -o /dev/null -w "%{time_starttransfer};%{http_code}\n" "$1")
+  took=$(echo $line | cut -d';' -f1 | cut -c -4)
+  code=$(echo $line | cut -d';' -f2)
+
+  printf "%s\t%s\t%s\n" "$now" "$took" "$code" | tee -a "$csv"
   sleep 0.1
 done
