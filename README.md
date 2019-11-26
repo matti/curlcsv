@@ -1,5 +1,12 @@
 # curlcsv
 
+## install
+
+    git clone https://github.com/matti/curlcsv
+    ln -s $(pwd)/curlcsv/curlcsv /usr/local/bin
+
+
+## usage
 
     $ curlcsv example.com
     date	took	code
