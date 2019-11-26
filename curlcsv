@@ -10,6 +10,7 @@ _int() {
   echo ""
   echo ""
   echo "$csv"
+  exit 0
 }
 
 trap "_term" TERM
@@ -24,11 +25,19 @@ csv="/tmp/curlcsv-$started_at.csv"
 
 printf "date\ttook\tcode\n" | tee -a "$csv"
 while true; do
+  now_seconds=$SECONDS
   now=$(date '+%Y-%m-%d %H:%M:%S')
-  line=$(curl -L -s -o /dev/null -w "%{time_starttransfer};%{http_code}\n" "$1")
-  took=$(echo $line | cut -d';' -f1 | cut -c -4)
-  code=$(echo $line | cut -d';' -f2)
+  set +e
+    line=$(curl -L -s -o /dev/null -w "%{time_starttransfer};%{http_code}\n" "$1")
+    curl_status=$?
+  set -e
+  if [ "$curl_status" = 0 ]; then
+    took=$(echo $line | cut -d';' -f1 | cut -c -4)
+    code=$(echo $line | cut -d';' -f2)
+  else
+    took=$(($SECONDS - $now_seconds))
+    code=-1
+  fi
 
   printf "%s\t%s\t%s\n" "$now" "$took" "$code" | tee -a "$csv"
-  sleep 0.1
 done
