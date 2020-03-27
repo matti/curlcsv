@@ -22,17 +22,30 @@ _err() {
   >&2 echo "err: $*"
   exit 1
 }
-case "${1:-}" in
-  --parallel|-p)
-    parallel=$2
-    url=${@:3}
-  ;;
-  *)
-    parallel=1
-    url=$@
-  ;;
-esac
+for arg in $@; do
+  case "${arg}" in
+    --parallel|-p)
+      shift
+      parallel=$1
+      shift
+    ;;
+    --delay|-d)
+      shift
+      delay=$1
+      shift
+    ;;
+    --cachebuster|-cb)
+      shift
+      cachebuster=yes
+    ;;
+  esac
+done
 
+[ "${parallel:-}" = "" ] && parallel=1
+[ "${delay:-}" = "" ] && delay=0
+[ "${cachebuster:-}" = "" ] && cachebuster=no
+
+url=$1
 started_at=$(date +%Y-%m-%d-%H-%M-%S)
 csv="/tmp/curlcsv-$started_at.csv"
 
@@ -40,10 +53,19 @@ printf "date\ttook\tcode\tworker\n" | tee -a "$csv"
 for worker in $(seq 1 $parallel); do
   (
     while true; do
+      [ "$delay" != 0 ] && sleep $delay
+
+      if [ "$cachebuster" = "yes" ]; then
+        query_string="cachebuster=${RANDOM}${RANDOM}${RANDOM}"
+        target_url="${url}?${query_string}"
+      else
+        target_url="${url}"
+      fi
+
       now_seconds=$SECONDS
       now=$(date '+%Y-%m-%d %H:%M:%S')
       set +e
-        line=$(curl -L -s -o /dev/null -w "%{time_starttransfer};%{http_code}\n" "$url")
+        line=$(curl -L -s -o /dev/null -w "%{time_starttransfer};%{http_code}\n" "$target_url")
         curl_status=$?
       set -e
       if [ "$curl_status" = 0 ]; then
