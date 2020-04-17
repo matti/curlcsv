@@ -1,15 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+shutdown=no
+
 _term() {
   >&2 echo "TERM"
   exit 0
 }
 _int() {
-  kill $(jobs -p) || true
-  wait $(jobs -p) || true
+  sleep 1
+
+  kill $(jobs -p) >/dev/null 2>&1 || true
+  wait $(jobs -p) >/dev/null 2>&1 || true
 
   pbcopy < "$csv"
+
   echo ""
   echo ""
   echo "$csv"
@@ -53,6 +58,7 @@ printf "date\ttook\tcode\tworker\n" | tee -a "$csv"
 for worker in $(seq 1 $parallel); do
   (
     while true; do
+      [ "$shutdown" = "yes" ] && break
       [ "$delay" != 0 ] && sleep $delay
 
       if [ "$cachebuster" = "yes" ]; then
@@ -76,7 +82,9 @@ for worker in $(seq 1 $parallel); do
         code=-1
       fi
 
-      printf "%s\t%s\t%s\t%s\n" "$now" "$took" "$code" "$worker" | tee -a "$csv"
+      if [ "$shutdown" = "no" ]; then
+        printf "%s\t%s\t%s\t%s\n" "$now" "$took" "$code" "$worker" | tee -a "$csv"
+      fi
     done
   ) &
 done
